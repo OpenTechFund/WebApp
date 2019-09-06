@@ -24,6 +24,10 @@ from django.views.generic import (
 from opentech.apply.activity.messaging import MESSAGES, messenger
 from opentech.apply.activity.views import ActivityContextMixin, CommentFormView
 from opentech.apply.users.decorators import staff_required
+from opentech.apply.users.models import (
+    get_compliance_sentinel_user,
+    get_finance_sentinel_user
+)
 from opentech.apply.utils.storage import PrivateMediaView
 from opentech.apply.utils.views import (
     DelegateableView,
@@ -260,6 +264,9 @@ class ChangePaymentRequestStatusView(UpdateView):
             source=self.project,
             related=self.object,
         )
+
+        if form.instance.is_approved:
+            form.instance.send_to_finance(self.request)
 
         return response
 
@@ -665,6 +672,31 @@ class ProjectDetailSimplifiedView(DetailView):
     template_name_suffix = '_simplified_detail'
 
 
+class ProjectDetailUnauthenticatedView(DetailView):
+    model = Project
+    template_name_suffix = '_simplified_detail'
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+
+        messenger(
+            MESSAGES.UNAUTHENTICATED_PROJECT_VIEW_ACCESSED,
+            request=self.request,
+            user=get_compliance_sentinel_user(),
+            source=self.object,
+        )
+
+        return response
+
+    def get_object(self):
+        project = super().get_object()
+
+        if not project.is_in_contracting:
+            raise Http404
+
+        return project
+
+
 class ProjectApprovalEditView(UpdateView):
     form_class = ProjectApprovalForm
     model = Project
@@ -697,3 +729,31 @@ class ApplicantProjectEditView(UpdateView):
 class ProjectEditView(ViewDispatcher):
     admin_view = ProjectApprovalEditView
     applicant_view = ApplicantProjectEditView
+
+
+class PaymentRequestDetailUnauthenticatedView(DetailView):
+    model = PaymentRequest
+    pk_url_kwarg = 'payment_request_id'
+    template_name = 'application_projects/payment_request_detail.html'
+
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+
+        messenger(
+            MESSAGES.UNAUTHENTICATED_PAYMENT_REQUEST_VIEW_ACCESSED,
+            request=self.request,
+            user=get_finance_sentinel_user(),
+            source=self.object,
+        )
+
+        return response
+
+    def get_object(self):
+        get_object_or_404(Project, pk=self.kwargs['pk'])
+
+        payment_request = super().get_object()
+
+        if not payment_request.is_approved:
+            raise Http404
+
+        return payment_request

@@ -6,7 +6,9 @@ from .views import (
     ChangePaymentRequestStatusView,
     DeletePaymentRequestView,
     EditPaymentRequestView,
+    PaymentRequestDetailUnauthenticatedView,
     ProjectDetailSimplifiedView,
+    ProjectDetailUnauthenticatedView,
     ProjectDetailView,
     ProjectEditView,
     ProjectPrivateMediaView,
@@ -49,5 +51,11 @@ if settings.PROJECTS_ENABLED:
                 name='edit-payment-request',
             ),
             path('simplified/', ProjectDetailSimplifiedView.as_view(), name='simplified'),
+            path('unauthenticated/', ProjectDetailUnauthenticatedView.as_view(), name='unauthenticated'),
+            path(
+                '<int:payment_request_id>/unauthenticated/',
+                PaymentRequestDetailUnauthenticatedView.as_view(),
+                name='payment-request-unauthenticated',
+            ),
         ])),
     ]

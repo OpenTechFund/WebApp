@@ -142,13 +142,47 @@ class PaymentRequest(models.Model):
     date_to = models.DateTimeField()
     comment = models.TextField()
     status = models.TextField(choices=REQUEST_STATUS_CHOICES, default=SUBMITTED)
+    sent_to_finance_at = models.DateTimeField(null=True)
 
     def __str__(self):
         return f'Payment requested for {self.project}'
 
+    def get_absolute_url(self):
+        return reverse('apply:projects:payment-request-unauthenticated', kwargs={
+            'pk': self.project.pk,
+            'payment_request_id': self.pk,
+        })
+
     @property
     def has_changes_requested(self):
         return self.status == CHANGES_REQUESTED
+
+    @property
+    def is_approved(self):
+        return self.status in [CHANGES_REQUESTED, UNDER_REVIEW]
+
+    @property
+    def lead(self):
+        """Mirror Project.lead so PaymentRequest can be used with messaging framework."""
+        return self.project.lead
+
+    def send_to_finance(self, request):
+        """Notify Finance about this PaymentRequest."""
+
+        messenger(
+            MESSAGES.SENT_TO_FINANCE,
+            request=request,
+            user=request.user,
+            source=self,
+        )
+
+        self.sent_to_finance_at = timezone.now()
+        self.save(update_fields=['sent_to_finance_at'])
+
+    @property
+    def title(self):
+        """Mirror standard title field so PaymentRequest can be used with messaging framework."""
+        return str(self)
 
     def user_can_delete(self, user):
         if user.is_apply_staff:
@@ -327,6 +361,10 @@ class Project(models.Model):
                 }
 
     @property
+    def is_in_contracting(self):
+        return self.status == CONTRACTING
+
+    @property
     def is_in_progress(self):
         return self.status == IN_PROGRESS
 
@@ -347,6 +385,7 @@ class Project(models.Model):
 @register_setting
 class ProjectSettings(BaseSetting):
     compliance_email = models.TextField("Compliance Email")
+    finance_email = models.TextField("Finance Email")
 
 
 class DocumentCategory(models.Model):

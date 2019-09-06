@@ -397,6 +397,9 @@ class SlackAdapter(AdapterBase):
         MESSAGES.UPDATE_PAYMENT_REQUEST_STATUS: '{user} has updated status for payment request <{link}|{source.title}>.',
         MESSAGES.DELETE_PAYMENT_REQUEST: '{user} has deleted payment request from <{link}|{source.title}>.',
         MESSAGES.UPDATE_PAYMENT_REQUEST: '{user} has updated payment request for <{link}|{source.title}>.',
+        MESSAGES.UNAUTHENTICATED_PROJECT_VIEW_ACCESSED: 'Unauthenticated user has viewed project <{link}|{source.title}>.',
+        MESSAGES.UNAUTHENTICATED_SUBMISSION_VIEW_ACCESSED: 'Unauthenticated user has viewed submission <{link}|{source.title}>.',
+        MESSAGES.UNAUTHENTICATED_PAYMENT_REQUEST_VIEW_ACCESSED: 'Unauthenticated user has viewed payment request <{link}|{source}>.',
     }
 
     def __init__(self):
@@ -622,6 +625,7 @@ class EmailAdapter(AdapterBase):
         MESSAGES.SENT_TO_COMPLIANCE: 'messages/email/sent_to_compliance.html',
         MESSAGES.UPDATE_PAYMENT_REQUEST: 'handle_update_payment_request',
         MESSAGES.UPDATE_PAYMENT_REQUEST_STATUS: 'handle_payment_status_updated',
+        MESSAGES.SENT_TO_FINANCE: 'messages/email/sent_to_finance.html',
     }
 
     def get_subject(self, message_type, source):
@@ -710,6 +714,11 @@ class EmailAdapter(AdapterBase):
             partners = kwargs['added']
             return [partner.email for partner in partners]
 
+        if message_type == MESSAGES.UNAUTHENTICATED_PAYMENT_REQUEST_VIEW_ACCESSED:
+            # PaymentRequest uses `by` and we only fire this message type for
+            # unauthenticated access so there is no meaningful User.
+            return []
+
         if message_type == MESSAGES.SENT_TO_COMPLIANCE:
             from opentech.apply.projects.models import ProjectSettings
             project_settings = ProjectSettings.objects.first()
@@ -719,6 +728,16 @@ class EmailAdapter(AdapterBase):
                 return []
 
             return [project_settings.compliance_email]
+
+        if message_type == MESSAGES.SENT_TO_FINANCE:
+            from opentech.apply.projects.models import ProjectSettings
+            project_settings = ProjectSettings.objects.first()
+
+            if project_settings is None:
+                # TODO: what to do when this isn't configured??
+                return []
+
+            return [project_settings.finance_email]
 
         return [source.user.email]
 
