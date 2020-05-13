@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -1214,3 +1214,14 @@ class TestUserReminderDeleteView(BaseProjectDeleteTestCase):
         reminder = ReminderFactory()
         response = self.get_page(reminder)
         self.assertEqual(response.status_code, 403)
+
+
+@override_settings(ROOT_URLCONF='hypha.apply.urls')
+class TestSubmissionDetailUnauthenticatedView(TestCase):
+    def test_unauthenticated_user_can_access_view(self):
+        submission = ApplicationSubmissionFactory(rejected=True)
+
+        url = reverse('funds:submissions:unauthenticated', kwargs={'pk': submission.pk})
+        response = self.client.get(url, follow=True)
+
+        self.assertEqual(response.status_code, 200)

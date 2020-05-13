@@ -48,7 +48,9 @@ class MESSAGES(Enum):
     REPORT_NOTIFY = 'Report Notify'
     CREATE_REMINDER = 'Reminder Created'
     DELETE_REMINDER = 'Reminder Deleted'
-    REVIEW_REMINDER = 'Reminde to Review'
+    REVIEW_REMINDER = 'Reminder to Review'
+    UNAUTHENTICATED_PROJECT_VIEW_ACCESSED = 'Project was Access via Unauthenticated View'
+    UNAUTHENTICATED_SUBMISSION_VIEW_ACCESSED = 'Submission was Access via Unauthenticated View'
 
     @classmethod
     def choices(cls):
