@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
@@ -109,10 +110,17 @@ class CreatePaymentRequestView(CreateView):
     form_class = CreatePaymentRequestForm
 
     def dispatch(self, request, *args, **kwargs):
-        self.project = Project.objects.get(pk=kwargs['pk'])
+        self.project = get_object_or_404(Project, pk=self.kwargs['pk'])
         if not request.user.is_apply_staff and not self.project.user == request.user:
             return redirect(self.project)
         return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        if self.project.is_closed:
+            messages.error(request, "Payment Requests can't be added to a closed Project")
+            return redirect(self.project)
+
+        return super().post(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         return super().get_context_data(project=self.project, **kwargs)

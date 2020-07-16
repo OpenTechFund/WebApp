@@ -41,7 +41,10 @@ from ..files import get_files
 from ..filters import PaymentRequestListFilter, ProjectListFilter, ReportListFilter
 from ..forms import (
     ApproveContractForm,
+    CloseForm,
+    ClosingForm,
     CreateApprovalForm,
+    InProgressForm,
     ProjectApprovalForm,
     ProjectEditForm,
     RejectionForm,
@@ -152,6 +155,71 @@ class RejectionView(DelegatedViewMixin, UpdateView):
         self.object.save(update_fields=['is_locked'])
 
         return redirect(self.object)
+
+
+class MoveToInProgressView(DelegatedViewMixin, UpdateView):
+    context_name = 'in_progress_form'
+    form_class = InProgressForm
+    model = Project
+
+    def dispatch(self, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.object.is_closing:
+            return redirect(self.object)
+
+        return super().dispatch(*args, **kwargs)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        messenger(
+            MESSAGES.PROJECT_MOVED_TO_IN_PROGRESS,
+            request=self.request,
+            user=self.request.user,
+            source=self.object,
+        )
+
+        return response
+
+
+@method_decorator(staff_required, name='dispatch')
+class MoveToClosedView(DelegatedViewMixin, UpdateView):
+    context_name = 'close_form'
+    form_class = CloseForm
+    model = Project
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        messenger(
+            MESSAGES.PROJECT_MOVED_TO_CLOSED,
+            request=self.request,
+            user=self.request.user,
+            source=self.object,
+        )
+
+        return response
+
+
+@method_decorator(staff_required, name='dispatch')
+class MoveToClosingView(DelegatedViewMixin, UpdateView):
+    context_name = 'closing_form'
+    form_class = ClosingForm
+    model = Project
+
+    def form_valid(self, form):
+        project = self.kwargs['object']
+        form.instance.project = project
+        response = super().form_valid(form)
+
+        messenger(
+            MESSAGES.PROJECT_MOVED_TO_CLOSING,
+            request=self.request,
+            user=self.request.user,
+            source=project,
+        )
+
+        return response
 
 
 # PROJECT DOCUMENTS
@@ -394,6 +462,15 @@ class UploadContractView(DelegatedViewMixin, CreateView):
 
         return response
 
+    def post(self, request, *args, **kwargs):
+        project = self.kwargs['object']
+
+        if project.is_closed:
+            messages.error(self.request, "Contracts can't be added to a closed Project")
+            return redirect(project)
+
+        return super().post(request, *args, **kwargs)
+
 
 # PROJECT VIEW
 class BaseProjectDetailView(ReportingMixin, DetailView):
@@ -414,6 +491,9 @@ class AdminProjectDetailView(
         ApproveContractView,
         CommentFormView,
         CreateApprovalView,
+        MoveToClosedView,
+        MoveToClosingView,
+        MoveToInProgressView,
         RejectionView,
         RemoveDocumentView,
         SelectDocumentView,

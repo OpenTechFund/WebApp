@@ -538,6 +538,17 @@ class Project(BaseStreamForm, AccessFormData, models.Model):
         return correct_state and self.user_has_updated_details
 
     @property
+    def can_close(self):
+        """
+        Can this Project be closed?
+        When a Project has open Payment Requests it cannot be closed.
+        """
+        has_no_open_payment_requests = not self.payment_requests.exists()
+        is_in_correct_state = self.status in [IN_PROGRESS, CLOSING]
+
+        return has_no_open_payment_requests and is_in_correct_state
+
+    @property
     def requires_approval(self):
         return not self.approvals.exists()
 
@@ -562,6 +573,14 @@ class Project(BaseStreamForm, AccessFormData, models.Model):
     @property
     def is_in_progress(self):
         return self.status == IN_PROGRESS
+
+    @property
+    def is_closing(self):
+        return self.status == CLOSING
+
+    @property
+    def is_closed(self):
+        return self.status == COMPLETE
 
     def send_to_compliance(self, request):
         """Notify Compliance about this Project."""

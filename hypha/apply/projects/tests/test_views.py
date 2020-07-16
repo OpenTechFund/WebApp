@@ -21,9 +21,18 @@ from hypha.apply.utils.testing.tests import BaseViewTestCase
 
 from ..files import get_files
 from ..forms import SetPendingForm
-from ..models import CHANGES_REQUESTED, COMMITTED, CONTRACTING, IN_PROGRESS, SUBMITTED
+from ..models import (
+    CHANGES_REQUESTED,
+    CLOSING,
+    COMMITTED,
+    COMPLETE,
+    CONTRACTING,
+    IN_PROGRESS,
+    SUBMITTED,
+)
 from ..views import ContractsMixin, ProjectDetailSimplifiedView
 from .factories import (
+    ApprovedProjectFactory,
     ContractFactory,
     DocumentCategoryFactory,
     PacketFileFactory,
@@ -359,6 +368,29 @@ class TestStaffUploadContractView(BaseViewTestCase):
 
         self.assertEqual(project.contracts.count(), 1)
         self.assertTrue(project.contracts.first().is_signed)
+
+    def test_cannot_upload_contract_to_closed_project(self):
+        project = ProjectFactory(status=COMPLETE)
+        contract_count = project.contracts.count()
+
+        test_doc = BytesIO(b'somebinarydata')
+        test_doc.name = 'contract.pdf'
+
+        self.client.force_login(StaffFactory())
+
+        response = self.client.post(project.get_absolute_url(), {
+            'form-submitted-contract_form': '',
+            'file': test_doc,
+        }, follow=True, secure=True)
+
+        expected_url = RequestFactory().get('/', secure=True).build_absolute_uri(project.get_absolute_url())
+        self.assertRedirects(response, expected_url)
+
+        project.refresh_from_db()
+        self.assertEqual(project.contracts.count(), contract_count)
+
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
 
 
 class TestStaffSelectDocumentView(BaseViewTestCase):
@@ -849,6 +881,29 @@ class TestRequestPaymentViewAsApplicant(BaseViewTestCase):
 
         self.assertEqual(project.payment_requests.first().by, self.user)
 
+    def test_cannot_request_payment_on_a_closed_project(self):
+        project = ProjectFactory(status=COMPLETE)
+        payment_requests_count = project.payment_requests.count()
+
+        invoice = BytesIO(b'somebinarydata')
+        invoice.name = 'invoice.pdf'
+
+        self.client.force_login(StaffFactory())
+
+        response = self.post_page(project, {
+            'form-submitted-request_payment_form': '',
+            'file': invoice,
+        })
+
+        expected_url = self.url(project, 'detail')
+        self.assertRedirects(response, expected_url)
+
+        project.refresh_from_db()
+        self.assertEqual(project.payment_requests.count(), payment_requests_count)
+
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+
 
 class TestRequestPaymentViewAsStaff(BaseViewTestCase):
     base_view_name = 'request'
@@ -1047,6 +1102,27 @@ class TestStaffEditPaymentRequestView(BaseViewTestCase):
         self.assertEqual(project.payment_requests.first().pk, payment_request.pk)
 
         self.assertEqual(requested_value + Decimal("1"), payment_request.requested_value)
+
+
+class TestMoveToClosingView(BaseViewTestCase):
+    base_view_name = 'detail'
+    url_name = 'funds:projects:{}'
+    user_factory = StaffFactory
+
+    def get_kwargs(self, instance):
+        return {'pk': instance.pk}
+
+    def test_happy_path(self):
+        project = ProjectFactory()
+
+        response = self.post_page(project, {
+            'form-submitted-closing_form': '',
+            'id': project.id,
+        })
+        self.assertEqual(response.status_code, 200)
+
+        project.refresh_from_db()
+        self.assertEqual(project.status, CLOSING)
 
 
 class TestStaffChangePaymentRequestStatus(BaseViewTestCase):
@@ -1566,3 +1642,57 @@ class ApplicantStaffProjectPDFExport(BaseViewTestCase):
         project = ProjectFactory()
         response = self.get_page(project)
         self.assertEqual(response.status_code, 403)
+
+
+class TestMoveToClosedView(BaseViewTestCase):
+    base_view_name = 'detail'
+    url_name = 'funds:projects:{}'
+    user_factory = StaffFactory
+
+    def get_kwargs(self, instance):
+        return {'pk': instance.pk}
+
+    def test_happy_path(self):
+        project = ProjectFactory()
+
+        response = self.post_page(project, {
+            'form-submitted-close_form': '',
+            'id': project.id,
+        })
+        self.assertEqual(response.status_code, 200)
+
+        project.refresh_from_db()
+        self.assertEqual(project.status, COMPLETE)
+
+
+class TestMoveToInProgressView(BaseViewTestCase):
+    base_view_name = 'detail'
+    url_name = 'funds:projects:{}'
+    user_factory = StaffFactory
+
+    def get_kwargs(self, instance):
+        return {'pk': instance.pk}
+
+    def test_happy_path(self):
+        project = ApprovedProjectFactory(status=CLOSING)
+
+        response = self.post_page(project, {
+            'form-submitted-in_progress_form': '',
+            'id': project.id,
+        })
+        self.assertEqual(response.status_code, 200)
+
+        project.refresh_from_db()
+        self.assertEqual(project.status, IN_PROGRESS)
+
+    def test_cant_move_from_non_closing(self):
+        project = ApprovedProjectFactory()
+
+        response = self.post_page(project, {
+            'form-submitted-in_progress_form': '',
+            'id': project.id,
+        })
+        self.assertEqual(response.status_code, 200)
+
+        project.refresh_from_db()
+        self.assertEqual(project.status, COMMITTED)

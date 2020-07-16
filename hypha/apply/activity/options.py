@@ -48,7 +48,10 @@ class MESSAGES(Enum):
     REPORT_NOTIFY = 'Report Notify'
     CREATE_REMINDER = 'Reminder Created'
     DELETE_REMINDER = 'Reminder Deleted'
-    REVIEW_REMINDER = 'Reminde to Review'
+    REVIEW_REMINDER = 'Reminder to Review'
+    PROJECT_MOVED_TO_CLOSING = 'Project moved to Closing'
+    PROJECT_MOVED_TO_CLOSED = 'Project Closed'
+    PROJECT_MOVED_TO_IN_PROGRESS = 'Project moved to In Progress'
 
     @classmethod
     def choices(cls):

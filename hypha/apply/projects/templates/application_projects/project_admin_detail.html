@@ -1,6 +1,7 @@
 {% extends "application_projects/project_detail.html" %}
 
 {% load approval_tools %}
+{% load project_tools %}
 {% load static %}
 
 {% block admin_actions %}
@@ -39,6 +40,28 @@
     <h4 class="modal__header-bar">Request Changes</h4>
     {% include 'funds/includes/delegated_form_base.html' with form=rejection_form value='Request Changes'%}
 </div>
+
+{% if object.is_closing %}
+<div class="modal" id="move-to-in-progress">
+    <h4 class="modal__header-bar">Move to In Progress</h4>
+    {% include 'funds/includes/delegated_form_base.html' with form=in_progress_form value='Update' %}
+</div>
+{% endif %}
+
+{% if object.is_in_progress %}
+<div class="modal" id="move-to-closing">
+    <h4 class="modal__header-bar">Move to Closing</h4>
+    {% include 'funds/includes/delegated_form_base.html' with form=closing_form value='Update' %}
+</div>
+{% endif %}
+
+{% user_can_close project request.user as can_close %}
+{% if can_close %}
+<div class="modal" id="close-project">
+    <h4 class="modal__header-bar">Close</h4>
+    {% include 'funds/includes/delegated_form_base.html' with form=close_form value='Close' %}
+</div>
+{% endif %}
 
 {% if contract_to_approve %}
 <div class="modal" id="approve-contract">
@@ -85,6 +108,34 @@
       href="#">
       Request changes
   </a>
+{% endif %}
+
+{% if object.is_closed %}
+  <a data-fancybox
+      data-src="#move-to-in-progress"
+      class="button button--bottom-space button--primary button--full-width"
+      href="#">
+      Move to In Progress
+  </a>
+{% endif %}
+
+{% if object.is_in_progress %}
+  <a data-fancybox
+      data-src="#move-to-closing"
+      class="button button--bottom-space button--primary button--full-width"
+      href="#">
+      Move to Closing
+  </a>
+{% endif %}
+
+{% user_can_close project request.user as can_close %}
+{% if can_close %}
+<a data-fancybox
+    data-src="#close-project"
+    class="button button--bottom-space button--primary button--full-width"
+    href="#">
+    Close
+</a>
 {% endif %}
 
 {% endblock %}

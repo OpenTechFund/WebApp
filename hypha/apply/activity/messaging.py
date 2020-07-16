@@ -248,6 +248,9 @@ class ActivityAdapter(AdapterBase):
         MESSAGES.SUBMIT_REPORT: 'Submitted a report',
         MESSAGES.SKIPPED_REPORT: 'handle_skipped_report',
         MESSAGES.REPORT_FREQUENCY_CHANGED: 'handle_report_frequency',
+        MESSAGES.PROJECT_MOVED_TO_CLOSING: 'Project to closing.',
+        MESSAGES.PROJECT_MOVED_TO_CLOSED: 'Project to closed.',
+        MESSAGES.PROJECT_MOVED_TO_IN_PROGRESS: 'Project to in progress.',
     }
 
     def recipients(self, message_type, **kwargs):
@@ -425,7 +428,10 @@ class SlackAdapter(AdapterBase):
         MESSAGES.UPDATE_PAYMENT_REQUEST_STATUS: '{user} has changed the status of <{link_related}|payment request> on <{link}|{source.title}> to {payment_request.status_display}.',
         MESSAGES.DELETE_PAYMENT_REQUEST: '{user} has deleted payment request from <{link}|{source.title}>.',
         MESSAGES.UPDATE_PAYMENT_REQUEST: '{user} has updated payment request for <{link}|{source.title}>.',
-        MESSAGES.SUBMIT_REPORT: '{user} has submitted a report for <{link}|{source.title}>.'
+        MESSAGES.SUBMIT_REPORT: '{user} has submitted a report for <{link}|{source.title}>.',
+        MESSAGES.PROJECT_MOVED_TO_CLOSING: '{user} has moved project to closing <{link}|{source.title}>.',
+        MESSAGES.PROJECT_MOVED_TO_CLOSED: '{user} has moved project to closed <{link}|{source.title}>.',
+        MESSAGES.PROJECT_MOVED_TO_IN_PROGRESS: '{user} has moved project to in progress <{link}|{source.title}>.',
     }
 
     def __init__(self):
