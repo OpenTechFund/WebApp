@@ -123,7 +123,9 @@ exports[`Test screening status Container Should render review form with Sidebarb
                 </svg>
               </ForwardRef(SvgIcon)>
             </WithStyles(ForwardRef(SvgIcon))>
-            <div>
+            <div
+              className="screening-status-active"
+            >
               a
             </div>
           </div>
@@ -180,7 +182,9 @@ exports[`Test screening status Container Should render review form with Sidebarb
                 </svg>
               </ForwardRef(SvgIcon)>
             </WithStyles(ForwardRef(SvgIcon))>
-            <div>
+            <div
+              className=""
+            >
               b
             </div>
           </div>
