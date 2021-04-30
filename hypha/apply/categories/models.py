@@ -15,6 +15,7 @@ from wagtail.search import index
 
 class Option(Orderable):
     value = models.CharField(max_length=255)
+    is_archived = models.BooleanField(default=False, verbose_name=_("Archived"))
     category = ParentalKey('Category', related_name='options')
 
     def __str__(self):
@@ -32,11 +33,13 @@ class Category(ClusterableModel):
         default=False, help_text='Make available to filter on dashboard'
     )
     help_text = models.CharField(max_length=255, blank=True)
+    is_archived = models.BooleanField(default=False, verbose_name=_("Archived"))
 
     panels = [
         FieldPanel('name'),
         FieldPanel('filter_on_dashboard'),
         FieldPanel('help_text'),
+        FieldPanel('is_archived'),
         InlinePanel('options', label='Options'),
     ]
 
